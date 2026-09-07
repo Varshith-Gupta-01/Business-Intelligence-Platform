@@ -1,7 +1,32 @@
 import pandas as pd
 import numpy as np
+import math
 from io import BytesIO
 from typing import Dict, Any, Optional
+try:
+    from backend.semantic_profiler import profile_dataset
+except ImportError:
+    from semantic_profiler import profile_dataset
+
+def sanitize_json_payload(obj: Any) -> Any:
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return {k: sanitize_json_payload(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [sanitize_json_payload(item) for item in obj]
+    if isinstance(obj, (np.floating, float)):
+        val = float(obj)
+        if math.isnan(val) or math.isinf(val):
+            return None
+        return val
+    if isinstance(obj, (np.integer, int)):
+        return int(obj)
+    if isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return sanitize_json_payload(obj.tolist())
+    return obj
 
 def format_file_size(size_bytes: int) -> str:
     if size_bytes < 1024:
@@ -11,7 +36,7 @@ def format_file_size(size_bytes: int) -> str:
     else:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
 
-def extract_dataset_overview(df: pd.DataFrame, file_name: str, file_size: int = 0) -> Dict[str, Any]:
+def extract_dataset_overview(df: pd.DataFrame, file_name: str, file_size: int = 0, semantic_profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     row_count = len(df)
     column_count = len(df.columns)
     total_cells = row_count * column_count
@@ -24,34 +49,38 @@ def extract_dataset_overview(df: pd.DataFrame, file_name: str, file_size: int = 
     categorical_cols_count = 0
     date_cols_count = 0
 
-    column_summary = []
     detected_date_col = None
     min_date_str = None
     max_date_str = None
     date_range_str = "No date column detected"
 
-    sales_keywords = {"sales", "revenue", "profit", "quantity", "qty", "product", "order_date", "customer", "region", "order id", "unit price", "discount"}
+    sales_keywords = {"sales", "revenue", "profit", "quantity", "qty", "product", "order_date", "customer", "region", "order id", "unit price", "discount", "invoiceno", "stockcode", "unitprice", "customerid", "invoicedate"}
     found_sales_indicators = 0
+
+    # Quick lookup from semantic profile if available
+    def clean_col(c: str) -> str:
+        return "".join(e for e in str(c).lower().replace("_", " ").replace("-", " ") if e.isalnum() or e.isspace()).strip()
+
+    profile_col_map = {}
+    if semantic_profile and "columns" in semantic_profile:
+        for c in semantic_profile["columns"]:
+            raw_name = str(c["name"])
+            profile_col_map[raw_name] = c
+            profile_col_map[raw_name.strip()] = c
+            profile_col_map[clean_col(raw_name)] = c
 
     for col in df.columns:
         col_str = str(col).strip()
-        col_clean = "".join(e for e in col_str.lower().replace("_", " ") if e.isalnum() or e.isspace()).strip()
+        col_clean = clean_col(col_str)
 
         if any(kw in col_clean for kw in sales_keywords):
             found_sales_indicators += 1
 
-        missing_cnt = int(df[col].isna().sum())
-        unique_cnt = int(df[col].nunique(dropna=True))
-
-        # Check data type without modifying original df
         series_clean = df[col].dropna()
-        col_type = "Text / Category"
 
         if pd.api.types.is_numeric_dtype(df[col]):
-            col_type = "Numeric"
             numeric_cols_count += 1
         elif pd.api.types.is_datetime64_any_dtype(df[col]):
-            col_type = "Date"
             date_cols_count += 1
             if detected_date_col is None:
                 detected_date_col = col_str
@@ -64,12 +93,10 @@ def extract_dataset_overview(df: pd.DataFrame, file_name: str, file_size: int = 
                 except Exception:
                     pass
         else:
-            # Check if column string values can be parsed as dates
             if "date" in col_clean or "time" in col_clean:
                 try:
                     parsed_dates = pd.to_datetime(series_clean, errors='coerce').dropna()
                     if len(parsed_dates) > 0 and len(parsed_dates) >= 0.5 * len(series_clean):
-                        col_type = "Date"
                         date_cols_count += 1
                         if detected_date_col is None:
                             detected_date_col = col_str
@@ -78,17 +105,19 @@ def extract_dataset_overview(df: pd.DataFrame, file_name: str, file_size: int = 
                             min_date_str = min_date.strftime("%b %Y") if hasattr(min_date, "strftime") else str(min_date)
                             max_date_str = max_date.strftime("%b %Y") if hasattr(max_date, "strftime") else str(max_date)
                             date_range_str = f"{min_date_str} — {max_date_str}"
+                    else:
+                        categorical_cols_count += 1
                 except Exception:
-                    col_type = "Text / Category"
                     categorical_cols_count += 1
-            if col_type == "Text / Category":
+            else:
                 categorical_cols_count += 1
 
     dataset_type = "Sales Dataset" if found_sales_indicators >= 2 else "General Dataset"
 
+    column_summary = []
     for col in df.columns:
         col_str = str(col).strip()
-        col_clean = "".join(e for e in col_str.lower().replace("_", " ") if e.isalnum() or e.isspace()).strip()
+        col_clean = clean_col(col_str)
 
         col_type = "Text / Category"
         if pd.api.types.is_numeric_dtype(df[col]):
@@ -104,9 +133,18 @@ def extract_dataset_overview(df: pd.DataFrame, file_name: str, file_size: int = 
             except Exception:
                 pass
 
+        sem_role = "unknown"
+        sem_conf = 0.50
+        matched_profile = profile_col_map.get(col_str) or profile_col_map.get(col) or profile_col_map.get(col_clean)
+        if matched_profile:
+            sem_role = matched_profile.get("semantic_role", "unknown")
+            sem_conf = matched_profile.get("confidence", 0.50)
+
         column_summary.append({
             "column_name": col_str,
             "data_type": col_type,
+            "semantic_role": sem_role,
+            "confidence": sem_conf,
             "unique_values": int(df[col].nunique(dropna=True)),
             "missing_values": int(df[col].isna().sum())
         })
@@ -143,8 +181,11 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
     if file_size == 0:
         file_size = len(file_content)
 
-    # Extract Dataset Overview (Inspection only, zero modification to df)
-    dataset_overview = extract_dataset_overview(df, file_name, file_size)
+    # Task 03: Profile dataset with Semantic Profiler
+    semantic_profile = profile_dataset(df)
+
+    # Extract Dataset Overview with Semantic Roles
+    dataset_overview = extract_dataset_overview(df, file_name, file_size, semantic_profile)
 
     original_cols = [str(col).strip() for col in df.columns]
     
@@ -152,7 +193,6 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
     def clean_col(c: str) -> str:
         return "".join(e for e in c.lower().replace("_", " ").replace("-", " ") if e.isalnum() or e.isspace()).strip()
 
-    col_map = {}
     clean_to_orig = {}
     for orig in original_cols:
         cleaned = clean_col(orig)
@@ -160,14 +200,14 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
 
     # Flexible matching dictionary
     aliases = {
-        "order_id": ["order id", "orderid", "order_id", "transaction id", "trans id", "id", "order number"],
-        "order_date": ["order date", "order_date", "orderdate", "date", "trans date", "transaction date", "ship date"],
-        "customer": ["customer", "customer name", "client", "buyer", "customer id", "client name"],
-        "product": ["product", "product name", "item", "item name", "product_name", "description"],
+        "order_id": ["order id", "orderid", "order_id", "transaction id", "trans id", "id", "order number", "invoiceno", "invoice no"],
+        "order_date": ["order date", "order_date", "orderdate", "date", "trans date", "transaction date", "ship date", "invoicedate", "invoice date"],
+        "customer": ["customer", "customer name", "client", "buyer", "customer id", "client name", "customerid"],
+        "product": ["product", "product name", "item", "item name", "product_name", "description", "stockcode", "stock code"],
         "category": ["category", "product category", "item category", "cat", "department", "sub category"],
         "region": ["region", "location", "territory", "zone", "country", "state", "city", "market"],
         "quantity": ["quantity", "qty", "units", "count", "quantity sold", "units sold"],
-        "unit_price": ["unit price", "price", "unit_price", "rate", "price per unit"],
+        "unit_price": ["unit price", "price", "unit_price", "rate", "price per unit", "unitprice"],
         "sales": ["sales", "revenue", "total sales", "amount", "total amount", "line total", "sales amount"],
         "discount": ["discount", "disc", "discount amount", "rebate"],
         "profit": ["profit", "net profit", "margin", "earnings", "total profit", "income"]
@@ -181,7 +221,6 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
                 matched_orig = clean_to_orig[cand]
                 break
         if not matched_orig:
-            # Fallback partial matching
             for cleaned_key, orig in clean_to_orig.items():
                 if any(cand in cleaned_key for cand in candidates):
                     matched_orig = orig
@@ -191,7 +230,6 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
 
     # Extract clean dataframe for dashboard calculations
     norm_df = pd.DataFrame()
-
     for field, orig_col in field_matching.items():
         norm_df[field] = df[orig_col]
 
@@ -216,7 +254,6 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
 
     # 1. KPI Calculations
     kpis = {}
-    
     if "sales" in norm_df.columns:
         total_sales = float(norm_df["sales"].sum())
         kpis["total_sales"] = {
@@ -283,7 +320,7 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
     # 2. Charts Aggregation
     charts = {}
 
-    # Chart 1: Sales Trend (Monthly)
+    # Chart 1: Sales Trend
     if "order_date" in norm_df.columns and "sales" in norm_df.columns:
         valid_dates = norm_df.dropna(subset=["order_date"]).copy()
         if not valid_dates.empty:
@@ -329,7 +366,7 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
             region_data.append(item)
 
         charts["sales_by_region"] = {
-            "title": "Sales by Region",
+            "title": "Sales by Region / Country",
             "type": "bar",
             "data": region_data,
             "x_key": "region",
@@ -383,74 +420,32 @@ def parse_sales_excel(file_content: bytes, file_name: str, file_size: int = 0) -
             prod_data.append(item)
 
         charts["top_products"] = {
-            "title": "Top 10 Products by Sales",
+            "title": "Top 10 Products / Descriptions by Sales",
             "type": "horizontal_bar",
             "data": prod_data,
             "x_key": "product",
             "series": ["sales"]
         }
 
-    # Chart 5: Profit Analysis by Category or Region
-    if "profit" in norm_df.columns:
-        group_col = "category" if "category" in norm_df.columns else ("region" if "region" in norm_df.columns else None)
-        if group_col:
-            prof_group = norm_df.groupby(group_col).agg(
-                profit=("profit", "sum"),
-                sales=("sales", "sum") if "sales" in norm_df.columns else ("profit", lambda x: 0)
-            ).reset_index().sort_values("profit", ascending=False).head(10)
+    # Task 04: Sanitize row records for client-side interactive cross-filtering
+    records_df = df.copy()
+    for col in records_df.columns:
+        if pd.api.types.is_datetime64_any_dtype(records_df[col]):
+            records_df[col] = records_df[col].dt.strftime("%Y-%m-%d").fillna("")
+    records = records_df.where(pd.notnull(records_df), None).to_dict(orient="records")
 
-            prof_data = []
-            for _, row in prof_group.iterrows():
-                prof_data.append({
-                    "name": str(row[group_col]),
-                    "profit": round(float(row["profit"]), 2),
-                    "sales": round(float(row["sales"]), 2)
-                })
-
-            charts["profit_analysis"] = {
-                "title": f"Profit Breakdown by {group_col.title()}",
-                "type": "bar",
-                "data": prof_data,
-                "x_key": "name",
-                "series": ["profit"]
-            }
-
-    # Chart 6: Quantity Analysis by Category or Product
-    if "quantity" in norm_df.columns:
-        group_col = "category" if "category" in norm_df.columns else ("product" if "product" in norm_df.columns else None)
-        if group_col:
-            qty_group = norm_df.groupby(group_col).agg(
-                quantity=("quantity", "sum")
-            ).reset_index().sort_values("quantity", ascending=False).head(10)
-
-            qty_data = []
-            for _, row in qty_group.iterrows():
-                name = str(row[group_col])
-                if len(name) > 25:
-                    name = name[:22] + "..."
-                qty_data.append({
-                    "name": name,
-                    "quantity": int(row["quantity"])
-                })
-
-            charts["quantity_analysis"] = {
-                "title": f"Quantity Sold by {group_col.title()}",
-                "type": "bar",
-                "data": qty_data,
-                "x_key": "name",
-                "series": ["quantity"]
-            }
-
-    return {
+    return sanitize_json_payload({
         "file_name": file_name,
         "total_rows": total_rows,
         "mapped_columns": {field: orig for field, orig in field_matching.items()},
         "unmapped_columns": [c for c in original_cols if c not in field_matching.values()],
         "dataset_overview": dataset_overview,
+        "semantic_profile": semantic_profile,
+        "records": records,
         "kpis": kpis,
         "charts": charts,
         "metadata": {
             "sheet_name": "Primary Worksheet",
             "total_columns": len(original_cols)
         }
-    }
+    })

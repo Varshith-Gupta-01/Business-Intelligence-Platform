@@ -12,7 +12,13 @@ import {
   Sparkles, 
   Info,
   Database,
-  BarChart3
+  BarChart3,
+  Tag,
+  Key,
+  TrendingUp,
+  Clock,
+  FileText,
+  ToggleLeft
 } from 'lucide-react';
 
 export default function DatasetOverviewCard({ overview, onGenerateDashboard }) {
@@ -40,194 +46,244 @@ export default function DatasetOverviewCard({ overview, onGenerateDashboard }) {
 
   const isSalesDataset = dataset_type === 'Sales Dataset';
 
-  return (
-    <div className="max-w-4xl mx-auto py-6 px-4 animate-in fade-in zoom-in-95 duration-300">
-      {/* Top Banner & Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+  const getRoleBadge = (role) => {
+    switch (role) {
+      case 'identifier':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+            <Key className="h-3 w-3" />
+            <span>Identifier</span>
+          </span>
+        );
+      case 'time_dimension':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-500/10 text-sky-500 border border-sky-500/20">
+            <Clock className="h-3 w-3" />
+            <span>Time Dimension</span>
+          </span>
+        );
+      case 'measure':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            <TrendingUp className="h-3 w-3" />
+            <span>Measure</span>
+          </span>
+        );
+      case 'dimension':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+            <Tag className="h-3 w-3" />
+            <span>Dimension</span>
+          </span>
+        );
+      case 'attribute':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-500/10 text-purple-500 border border-purple-500/20">
+            <FileText className="h-3 w-3" />
+            <span>Attribute</span>
+          </span>
+        );
+      case 'boolean':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+            <ToggleLeft className="h-3 w-3" />
+            <span>Boolean</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-medium bg-[var(--bg-app)] text-[var(--text-muted)] border border-[var(--border-color)]">
+            <span>Unknown</span>
+          </span>
+        );
+    }
+  };
 
-        {/* Dataset Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
-          <div className="flex items-center space-x-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-500/20 text-white shrink-0">
-              <FileSpreadsheet className="h-7 w-7" />
+  return (
+    <div className="max-w-5xl mx-auto py-4 px-2 space-y-4">
+      {/* Workspace Header Panel */}
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-lg p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-color)]">
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+              <FileSpreadsheet className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center space-x-2.5 mb-1">
-                <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              <div className="flex items-center space-x-2 mb-0.5">
+                <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${
                   isSalesDataset 
-                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
-                    : 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400'
+                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500' 
+                    : 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-500'
                 }`}>
                   <Sparkles className="h-3 w-3" />
                   <span>{dataset_type}</span>
                 </span>
-                <span className="text-xs text-slate-500">• {file_size_formatted}</span>
+                <span className="text-xs text-[var(--text-muted)]">• {file_size_formatted}</span>
               </div>
-              <h2 className="text-2xl font-extrabold text-white tracking-tight">{file_name}</h2>
+              <h2 className="text-lg font-bold text-[var(--text-primary)] tracking-tight">{file_name}</h2>
             </div>
           </div>
 
-          {/* Primary CTA */}
           <button
             onClick={onGenerateDashboard}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-7 py-3.5 rounded-2xl shadow-xl shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2 rounded-md text-xs shadow-sm transition-all cursor-pointer"
           >
-            <BarChart3 className="h-5 w-5" />
+            <BarChart3 className="h-4 w-4" />
             <span>Generate Dashboard</span>
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        {/* Main Metadata Section - 4 Key Info Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
-          {/* Card 1: Basic Stats */}
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider">Basic Info</span>
-              <Layers className="h-4 w-4 text-blue-400" />
+        {/* Metadata Grid Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4">
+          {/* Basic Info */}
+          <div className="bg-[var(--bg-app)] border border-[var(--border-color)] rounded-md p-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Basic Info</span>
+              <Layers className="h-3.5 w-3.5 text-blue-500" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between items-baseline">
-                <span className="text-xs text-slate-400">Rows:</span>
-                <span className="font-bold text-white text-base">{row_count.toLocaleString()}</span>
+                <span className="text-[var(--text-secondary)]">Rows:</span>
+                <span className="font-bold text-[var(--text-primary)]">{row_count.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-xs text-slate-400">Columns:</span>
-                <span className="font-bold text-white text-base">{column_count}</span>
+                <span className="text-[var(--text-secondary)]">Columns:</span>
+                <span className="font-bold text-[var(--text-primary)]">{column_count}</span>
               </div>
-              <div className="flex justify-between items-baseline border-t border-slate-700/40 pt-1.5">
-                <span className="text-xs text-slate-400">Total Cells:</span>
-                <span className="font-medium text-slate-300 text-xs">{total_cells.toLocaleString()}</span>
+              <div className="flex justify-between items-baseline border-t border-[var(--border-subtle)] pt-1">
+                <span className="text-[var(--text-muted)]">Total Cells:</span>
+                <span className="font-medium text-[var(--text-secondary)]">{total_cells.toLocaleString()}</span>
               </div>
             </div>
           </div>
 
-          {/* Card 2: Column Types Breakdown */}
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider">Column Types</span>
-              <Hash className="h-4 w-4 text-purple-400" />
+          {/* Column Types */}
+          <div className="bg-[var(--bg-app)] border border-[var(--border-color)] rounded-md p-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Column Types</span>
+              <Hash className="h-3.5 w-3.5 text-purple-500" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Numeric:</span>
-                <span className="font-bold text-purple-300 text-sm bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20">
+                <span className="text-[var(--text-secondary)]">Numeric:</span>
+                <span className="font-bold text-purple-500 bg-purple-500/10 px-1.5 py-0.2 rounded border border-purple-500/20 text-[11px]">
                   {numeric_columns_count}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Categorical / Text:</span>
-                <span className="font-bold text-slate-200 text-sm bg-slate-700/40 px-2 py-0.5 rounded-md">
+                <span className="text-[var(--text-secondary)]">Categorical / Text:</span>
+                <span className="font-bold text-[var(--text-primary)] text-[11px]">
                   {categorical_columns_count}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Date / Time:</span>
-                <span className="font-bold text-sky-300 text-sm bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20">
+                <span className="text-[var(--text-secondary)]">Date / Time:</span>
+                <span className="font-bold text-sky-500 bg-sky-500/10 px-1.5 py-0.2 rounded border border-sky-500/20 text-[11px]">
                   {date_columns_count}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Card 3: Data Quality Indicators */}
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider">Data Quality</span>
+          {/* Data Quality */}
+          <div className="bg-[var(--bg-app)] border border-[var(--border-color)] rounded-md p-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Data Quality</span>
               {total_missing_values === 0 && duplicate_rows === 0 ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
               ) : (
-                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
               )}
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between items-baseline">
-                <span className="text-xs text-slate-400">Missing Values:</span>
-                <span className={`font-bold text-sm ${total_missing_values === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                <span className="text-[var(--text-secondary)]">Missing Values:</span>
+                <span className={`font-bold ${total_missing_values === 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
                   {total_missing_values}
                 </span>
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-xs text-slate-400">Rows w/ Missing:</span>
-                <span className="font-medium text-slate-300 text-xs">{rows_with_missing_values}</span>
+                <span className="text-[var(--text-secondary)]">Rows w/ Missing:</span>
+                <span className="font-medium text-[var(--text-secondary)]">{rows_with_missing_values}</span>
               </div>
-              <div className="flex justify-between items-baseline border-t border-slate-700/40 pt-1.5">
-                <span className="text-xs text-slate-400">Duplicate Rows:</span>
-                <span className={`font-bold text-xs ${duplicate_rows === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <div className="flex justify-between items-baseline border-t border-[var(--border-subtle)] pt-1">
+                <span className="text-[var(--text-muted)]">Duplicate Rows:</span>
+                <span className={`font-bold ${duplicate_rows === 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
                   {duplicate_rows}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Card 4: Date Range Info */}
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider">Date Timeline</span>
-              <Calendar className="h-4 w-4 text-sky-400" />
+          {/* Date Timeline */}
+          <div className="bg-[var(--bg-app)] border border-[var(--border-color)] rounded-md p-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Date Timeline</span>
+              <Calendar className="h-3.5 w-3.5 text-sky-500" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 text-xs">
               <div>
-                <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Detected Date Col</span>
-                <p className="text-xs font-medium text-slate-200 truncate">{date_column_name}</p>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">Detected Date Col</span>
+                <p className="font-medium text-[var(--text-primary)] truncate text-[11px]">{date_column_name}</p>
               </div>
-              <div className="border-t border-slate-700/40 pt-1.5">
-                <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Date Range</span>
-                <p className="text-xs font-bold text-sky-400">{date_range}</p>
+              <div className="border-t border-[var(--border-subtle)] pt-1">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">Date Range</span>
+                <p className="font-bold text-sky-500 text-[11px]">{date_range}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Expandable Column Summary Table */}
-        <div className="border border-slate-800 rounded-2xl bg-slate-950/40 overflow-hidden">
+        {/* Data Grid Column Profiler Table */}
+        <div className="border border-[var(--border-color)] rounded-md bg-[var(--bg-app)] overflow-hidden">
           <button
             onClick={() => setShowColumnsTable(!showColumnsTable)}
-            className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-800/30 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between p-3 text-left hover:bg-[var(--bg-surface-hover)] transition-colors cursor-pointer"
           >
             <div className="flex items-center space-x-2">
-              <Database className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-semibold text-white">Column Summary</span>
-              <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono">
+              <Database className="h-4 w-4 text-blue-500" />
+              <span className="text-xs font-bold text-[var(--text-primary)]">Column Summary & Semantic Roles</span>
+              <span className="text-[11px] bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-secondary)] px-2 py-0.2 rounded font-mono">
                 {columns.length} Columns
               </span>
             </div>
-            <div className="flex items-center space-x-1 text-xs text-slate-400">
-              <span>{showColumnsTable ? 'Hide Table' : 'Show Details'}</span>
-              {showColumnsTable ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            <div className="flex items-center space-x-1 text-xs text-[var(--text-muted)]">
+              <span>{showColumnsTable ? 'Hide Grid' : 'Show Grid'}</span>
+              {showColumnsTable ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </div>
           </button>
 
           {showColumnsTable && (
-            <div className="border-t border-slate-800 max-h-72 overflow-y-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold sticky top-0 border-b border-slate-800">
+            <div className="border-t border-[var(--border-color)] max-h-80 overflow-y-auto">
+              <table className="w-full text-left text-xs text-[var(--text-secondary)]">
+                <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)] uppercase tracking-wider font-bold text-[10px] sticky top-0 border-b border-[var(--border-color)]">
                   <tr>
-                    <th className="py-3 px-4">Column Name</th>
-                    <th className="py-3 px-4">Data Type</th>
-                    <th className="py-3 px-4 text-right">Unique Values</th>
-                    <th className="py-3 px-4 text-right">Missing Values</th>
+                    <th className="py-2.5 px-3">Column Name</th>
+                    <th className="py-2.5 px-3">Data Type</th>
+                    <th className="py-2.5 px-3">Semantic Role</th>
+                    <th className="py-2.5 px-3 text-right">Confidence</th>
+                    <th className="py-2.5 px-3 text-right">Unique Values</th>
+                    <th className="py-2.5 px-3 text-right">Missing</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[var(--border-subtle)]">
                   {columns.map((col, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-2.5 px-4 font-mono font-medium text-slate-200">{col.column_name}</td>
-                      <td className="py-2.5 px-4">
-                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                          col.data_type === 'Numeric' 
-                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                            : col.data_type === 'Date'
-                            ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                            : 'bg-slate-800 text-slate-300'
-                        }`}>
+                    <tr key={idx} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
+                      <td className="py-2 px-3 font-mono font-medium text-[var(--text-primary)]">{col.column_name}</td>
+                      <td className="py-2 px-3">
+                        <span className="inline-block px-1.5 py-0.2 rounded text-[10px] font-medium bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-secondary)]">
                           {col.data_type}
                         </span>
                       </td>
-                      <td className="py-2.5 px-4 text-right font-mono text-slate-300">{col.unique_values.toLocaleString()}</td>
-                      <td className={`py-2.5 px-4 text-right font-mono font-medium ${col.missing_values > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                      <td className="py-2 px-3">
+                        {getRoleBadge(col.semantic_role)}
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono text-[var(--text-muted)]">
+                        {col.confidence ? `${Math.round(col.confidence * 100)}%` : '—'}
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono text-[var(--text-primary)]">{col.unique_values.toLocaleString()}</td>
+                      <td className={`py-2 px-3 text-right font-mono font-medium ${col.missing_values > 0 ? 'text-amber-500' : 'text-[var(--text-muted)]'}`}>
                         {col.missing_values}
                       </td>
                     </tr>
@@ -236,21 +292,6 @@ export default function DatasetOverviewCard({ overview, onGenerateDashboard }) {
               </table>
             </div>
           )}
-        </div>
-
-        {/* Bottom CTA Card Action */}
-        <div className="mt-8 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-2 text-xs text-slate-400">
-            <Info className="h-4 w-4 text-blue-400 shrink-0" />
-            <span>Dataset validated. Click below to view the executive sales dashboard.</span>
-          </div>
-          <button
-            onClick={onGenerateDashboard}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] cursor-pointer"
-          >
-            <span>Generate Dashboard</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
         </div>
       </div>
     </div>

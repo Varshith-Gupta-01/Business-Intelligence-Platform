@@ -7,42 +7,42 @@ export default function MappedFieldsBadge({ mappedColumns, unmappedColumns }) {
   if (!mappedColumns || Object.keys(mappedColumns).length === 0) return null;
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl mb-8 p-4 text-xs">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-lg p-3 text-xs mb-4 shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between text-slate-300 hover:text-white transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
       >
         <div className="flex items-center space-x-2">
-          <Database className="h-4 w-4 text-blue-400" />
-          <span className="font-semibold text-sm">Detected Schema & Mapped Columns</span>
-          <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-0.5 rounded-md font-mono text-[11px]">
+          <Database className="h-3.5 w-3.5 text-blue-500" />
+          <span className="font-semibold text-xs text-[var(--text-primary)]">Detected Schema & Mapped Fields</span>
+          <span className="bg-blue-500/10 border border-blue-500/20 text-blue-500 px-2 py-0.2 rounded font-mono text-[11px]">
             {Object.keys(mappedColumns).length} Columns Identified
           </span>
         </div>
-        {isOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+        {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-[var(--text-muted)]" /> : <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
       </button>
 
       {isOpen && (
-        <div className="mt-4 pt-4 border-t border-slate-800/80">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {Object.entries(mappedColumns).map(([stdName, origName]) => (
-              <div key={stdName} className="flex items-center space-x-2 bg-slate-800/60 border border-slate-700/50 p-2.5 rounded-xl">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                <div className="truncate">
-                  <span className="font-medium text-slate-200 capitalize">{stdName.replace('_', ' ')}</span>
-                  <span className="text-slate-500 mx-1">←</span>
-                  <span className="text-slate-400 font-mono italic">{origName}</span>
+              <div key={stdName} className="flex items-center space-x-2 bg-[var(--bg-app)] border border-[var(--border-color)] p-2 rounded-md">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                <div className="truncate text-xs">
+                  <span className="font-semibold text-[var(--text-primary)] capitalize">{stdName.replace('_', ' ')}</span>
+                  <span className="text-[var(--text-muted)] mx-1">←</span>
+                  <span className="text-[var(--text-secondary)] font-mono italic">{origName}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {unmappedColumns && unmappedColumns.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-800/50 text-slate-400 flex items-center space-x-2">
-              <span className="font-medium text-slate-300">Unmapped Columns:</span>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="mt-2.5 pt-2.5 border-t border-[var(--border-subtle)] text-[var(--text-muted)] flex items-center space-x-2">
+              <span className="font-semibold text-[var(--text-secondary)]">Unmapped Columns:</span>
+              <div className="flex flex-wrap gap-1">
                 {unmappedColumns.map((col) => (
-                  <span key={col} className="bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">
+                  <span key={col} className="bg-[var(--bg-app)] border border-[var(--border-color)] px-1.5 py-0.2 rounded text-[var(--text-secondary)] font-mono">
                     {col}
                   </span>
                 ))}
